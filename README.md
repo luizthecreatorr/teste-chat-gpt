@@ -9,4 +9,4 @@ cd /workspace/teste-chat-gpt
 python -m http.server 8000 --bind 0.0.0.0
 ```
 
-Sirva `index.html`, `style.css` e `app.js` em uma hospedagem estática. Os registros são salvos apenas no navegador (localStorage), sem servidor ou sincronização entre aparelhos. Use Exportar diário para guardar backups; Importar diário substitui os registros atuais após confirmação. Começa sem dados fictícios. As fontes externas são opcionais, com alternativas locais.
+Sirva `index.html`, `style.css`, `app.js` e a pasta `assets/` em uma hospedagem estática. A capa usa uma paisagem de fantasia original gerada para este projeto. Os registros são salvos apenas no navegador (localStorage), sem servidor ou sincronização entre aparelhos. Use Exportar diário para guardar backups; Importar diário substitui os registros atuais após confirmação. Começa sem dados fictícios. As fontes externas são opcionais, com alternativas locais.
