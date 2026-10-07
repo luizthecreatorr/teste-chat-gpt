@@ -1,0 +1,25 @@
+const key='azeroth-journal-v1';
+let state={sessions:[],goals:[]};
+function valid(data){return data&&Array.isArray(data.sessions)&&Array.isArray(data.goals)&&data.sessions.every(s=>s&&typeof s.id==='string'&&typeof s.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s.date)&&typeof s.character==='string'&&typeof s.activity==='string'&&typeof s.learning==='string'&&typeof s.next==='string'&&Number.isInteger(s.minutes)&&s.minutes>=1&&s.minutes<=1440)&&data.goals.every(g=>g&&typeof g.id==='string'&&typeof g.text==='string'&&typeof g.done==='boolean');}
+try{const saved=JSON.parse(localStorage.getItem(key));if(valid(saved))state=saved;}catch{}
+const $=s=>document.querySelector(s);
+const feedback=$('#feedback');
+function save(){try{localStorage.setItem(key,JSON.stringify(state));return true;}catch{feedback.textContent='Não foi possível salvar neste navegador. Exporte um backup antes de sair.';return false;}}
+function element(tag,text,className){const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;}
+function render(){
+ $('#sessions').textContent=state.sessions.length;
+ $('#hours').textContent=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(state.sessions.reduce((sum,s)=>sum+s.minutes,0)/60);
+ $('#completed').textContent=state.goals.filter(g=>g.done).length;
+ const entries=$('#entries');entries.replaceChildren();
+ if(!state.sessions.length)entries.append(element('p','Sua história começa na próxima sessão. Registre o que aprendeu e veja sua evolução aparecer aqui.','empty-state'));
+ [...state.sessions].sort((a,b)=>b.date.localeCompare(a.date)).forEach(s=>{const card=element('article','','entry');card.append(element('span',`${s.date.split('-').reverse().join('/')} · ${s.activity} · ${s.minutes} min`,'eyebrow'),element('h3',s.character),element('p',s.learning));if(s.next)card.append(element('p',`Próximo passo: ${s.next}`,'muted'));const remove=element('button','Excluir sessão','text-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Excluir esta sessão do diário?')){state.sessions=state.sessions.filter(item=>item.id!==s.id);save();render();}});card.append(remove);entries.append(card);});
+ const list=$('#goal-list');list.replaceChildren();if(!state.goals.length)list.append(element('p','Nenhuma meta ainda. Qual será seu próximo desafio?','empty-state'));
+ state.goals.forEach(g=>{const row=element('div','','goal-row');const label=element('label','');const input=document.createElement('input');input.type='checkbox';input.checked=g.done;input.addEventListener('change',()=>{g.done=input.checked;save();render();});label.append(input,element('span',g.text));if(g.done)label.className='done';const remove=element('button','×','text-button');remove.type='button';remove.setAttribute('aria-label',`Excluir meta: ${g.text}`);remove.addEventListener('click',()=>{if(confirm('Excluir esta meta?')){state.goals=state.goals.filter(item=>item.id!==g.id);save();render();}});row.append(label,remove);list.append(row);});
+}
+function today(){const date=new Date();return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
+$('#session-form').elements.date.value=today();
+$('#session-form').addEventListener('submit',event=>{event.preventDefault();const data=new FormData(event.target);const session={id:crypto.randomUUID(),date:data.get('date'),character:data.get('character').trim(),activity:data.get('activity'),minutes:Number(data.get('minutes')),learning:data.get('learning').trim(),next:data.get('next').trim()};if(!session.character||!session.learning){feedback.textContent='Preencha o personagem e o aprendizado.';return;}state.sessions.push(session);const saved=save();render();event.target.elements.learning.value='';event.target.elements.next.value='';if(saved)feedback.textContent='Sessão salva! Mais um passo na sua jornada.';});
+$('#goal-form').addEventListener('submit',event=>{event.preventDefault();const text=event.target.elements.goal.value.trim();if(!text)return;state.goals.push({id:crypto.randomUUID(),text,done:false});save();render();event.target.reset();});
+$('#export').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`azeroth-journal-${today()}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+$('#import').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{if(file.size>2000000)throw new Error();const data=JSON.parse(await file.text());if(!valid(data))throw new Error();if(!confirm('Importar substituirá os registros atuais. Continuar?'))return;state=data;const saved=save();render();$('#backup-status').textContent=saved?'Backup importado e salvo.':'Backup carregado, mas não foi salvo. Exporte antes de sair.';}catch{$('#backup-status').textContent='Arquivo inválido. Selecione um backup JSON exportado deste diário (até 2 MB).';}finally{event.target.value='';}});
+render();
